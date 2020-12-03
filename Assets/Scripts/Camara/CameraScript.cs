@@ -5,12 +5,12 @@ using UnityEngine;
 public class CameraScript : MonoBehaviour
 {
     public Controller2D target;
-    public Vector2 focusAreaSize;
+    public Vector2 focusAreaSize = new Vector2(2,2);
 
-    public float verticalOffset;
-    public float lookAheadDstX;
-    public float lookSmothTimeX;
-    public float verticalSmoothTime;
+    public float verticalOffset = 1;
+    public float lookAheadDstX = 5;
+    public float lookSmothTimeX = 1;
+    public float verticalSmoothTime = 0;
 
     FocusArea focusArea;
 
