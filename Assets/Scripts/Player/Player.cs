@@ -49,7 +49,8 @@ public class Player : MonoBehaviour
 
     [HideInInspector]
     public bool sube = false;
-    float alturaMax = 10, altura = 0;
+    [HideInInspector]
+    float altura = 5, alturaMax = 5;
 
     void Start()
     {
@@ -66,10 +67,11 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        ClimbWall();
+        
         //se recalcula la velocidad y las paredes cada frame
         CalculateVelocity();
         HandleWallSliding();
+        ClimbWall();
 
         //se hace el movimiento
         controller.Move(velocity * Time.deltaTime, directionalInput);
@@ -195,27 +197,30 @@ public class Player : MonoBehaviour
     void ClimbWall()
     {
         //solo puede empezar a escalar en el suelo pegado a una pared de 90º y moviendote hacia ella mientras corres
-        if ((controller.collisions.below && IsRunning || sube ) && wallDirX == directionalInput.x && controller.collisions.climbingWall)
+        if ((controller.collisions.below && IsRunning || sube) && wallDirX == directionalInput.x && controller.collisions.climbingWall)
         {
             sube = true;
+            timeToWallUnstick = wallStickTime;
 
-            if (altura < alturaMax)
+            altura -= velocity.y * Time.deltaTime;
+
+            if (altura > 0)
             {
-                altura += velocity.y * Time.deltaTime;
+                velocity.y = moveSpeed;
             }
             else
             {
                 sube = false;
             }
+
+            velocityXSmoothing = 0;
+            velocity.x = 0;
         }
         else
         {
             sube = false;
+            altura = alturaMax;
         }
-
-
-        //continuara escalando mientras no haya llegado a su tope y mientras no deje de moverse hacia la pared
-        //si ha llegado a su tope o paras baja
     }
 
     void HandleWallSliding ()
@@ -263,9 +268,6 @@ public class Player : MonoBehaviour
         //el sitio al que moverse sera:
         float targetVelocityX = directionalInput.x * moveSpeed;
         velocity.x = Mathf.SmoothDamp(velocity.x, targetVelocityX, ref velocityXSmoothing, (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborn);
-        if (sube)
-            velocity.y = moveSpeed;
-        else
-            velocity.y += gravity * Time.deltaTime;
+        velocity.y += gravity * Time.deltaTime;
     }
 }

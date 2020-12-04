@@ -5,9 +5,6 @@ using UnityEngine;
 public class Controller2D : RaycastController
 {
     public float maxSlopeAngle = 80;
-    float maxHeight = 10;
-    //esto debe cambiarse si modificamos la velicidad del gato en horizontal, estaria bien obtenerla del script de player
-    float velocityWalking = 0.09f;
 
     public CollisionInfo collisions;
     [HideInInspector]
@@ -118,12 +115,10 @@ public class Controller2D : RaycastController
                 //si no se esta subiendo ningun angulo o el angulo detectado es mayor que el maximo
                 if (!collisions.climbingSlope || slopeAngle > maxSlopeAngle)
                 {
-                    if (slopeAngle == 90 && hit.distance <= skinWidth)
+                    if (slopeAngle == 90)
                     {
                         collisions.climbingWall = true;
                     }
-                    else
-                        collisions.climbingWall = false;
 
                     //el movimiento en x sera en caso de que estes frente a una pared 0 y la distancia del rayo sera de la distancia que pueda quedar hasta esta
                     deltaMove.x = Mathf.Min(Mathf.Abs(deltaMove.x), (hit.distance - skinWidth)) * directionX;
@@ -319,37 +314,6 @@ public class Controller2D : RaycastController
         }
     }
 
-    /*
-    void ClimbWall (ref Vector2 deltaMove)
-    {
-        float directionY = Mathf.Sign(deltaMove.y);
-
-        float directionX = Mathf.Sign(deltaMove.x);
-        float rayLenght = Mathf.Abs(deltaMove.y) + skinWidth;
-        Vector2 rayOrigin = (directionX == -1) ? raycastOrigins.bottomRight : raycastOrigins.bottomLeft;
-        RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, rayLenght, collisionMask);
-
-        if (hit)
-            collisions.below = directionY == -1;
-
-
-        //esto probablemente no funcione en rampas
-        if (collisions.height < maxHeight && ((Mathf.Abs(deltaMove.x) > velocityWalking && collisions.below) || collisions.climbingWall))
-        {
-            deltaMove.y = velocityWalking;
-            collisions.climbingWall = true;
-            collisions.height += velocityWalking;
-            collisions.descendingWall = false;
-        }
-        else
-        {
-            collisions.height = 0;
-            collisions.descendingWall = true;
-        }
-
-    }
-    */
-
     public struct CollisionInfo
     {
         public bool above, below;
@@ -371,7 +335,7 @@ public class Controller2D : RaycastController
         {
             above = below = false;
             left = right = false;
-            climbingSlope = descendingSlope = slidingDownMaxSlope = false;
+            climbingSlope = descendingSlope = slidingDownMaxSlope = climbingWall = false;
             slopeNormal = Vector2.zero;
 
             slopeAngleOld = slopeAngle;
