@@ -11,14 +11,14 @@ public class Player : MonoBehaviour
     float accelerationTimeAirborn = .2f;
     float accelerationTimeGrounded = .1f;
     float moveSpeed = 5;
-    float lastDirection;
+    float lastDirection = 1;
 
-    public Vector2 wallJumpClimb = new Vector2 (7, 18);
-    public Vector2 wallJumpOff = new Vector2 (8.5f, 7);
-    public Vector2 wallLeap = new Vector2 (18, 17);
+    public Vector2 wallJumpClimb = new Vector2 (2, 20);
+    //public Vector2 wallJumpOff = new Vector2 (8.5f, 7);
+    public Vector2 wallLeap = new Vector2 (20, 2);
 
     public float wallSlideSpeedMax = 3;
-    public float wallStickTime = .1f;
+    public float wallStickTime = .2f;
     [HideInInspector]
     public float timeToWallUnstick;
 
@@ -31,9 +31,14 @@ public class Player : MonoBehaviour
     float velocityXSmoothing;
 
     [HideInInspector]
-    public bool IsRunning = false;
+    public bool isRunning = false;
     [HideInInspector]
-    public bool Prep = false;
+    public bool prep = false;
+    float longJump = 1;
+    bool prepare = true, jumped = false;
+
+    GameObject estela, fantasma;
+    float control = 10;
 
     Controller2D controller;
 
@@ -54,7 +59,7 @@ public class Player : MonoBehaviour
 
     void Start()
     {
-        controller = GetComponent<Controller2D> ();
+        controller = GetComponent<Controller2D>();
 
         //se inicializa la gravedad como menos dos veces la altura maxima del salto dividido por el tiempo para llegar ahi al cuadrado
         gravity = -(2 * maxJumpHeight) / Mathf.Pow(timeToJumpApex, 2);
@@ -63,6 +68,12 @@ public class Player : MonoBehaviour
         //la velocidad para alcanzar el salto minimo sera la raiz cuadrada de dos veces la gravedad por la altura minima
         minJumpVelocity = Mathf.Sqrt(2 * Mathf.Abs(gravity) * minJumpHeight);
         print("Gravity: " + gravity + " Jump Velocity: " + maxJumpVelocity);
+        
+        //coge todo lo de los hijos y los hace invisible
+        estela = this.transform.GetChild(0).gameObject;
+        estela.GetComponent<SpriteRenderer>().enabled = false;
+        fantasma = this.transform.GetChild(1).gameObject;
+        fantasma.GetComponent<SpriteRenderer>().enabled = false;
     }
 
     void Update()
@@ -72,6 +83,9 @@ public class Player : MonoBehaviour
         CalculateVelocity();
         HandleWallSliding();
         ClimbWall();
+
+        if (controller.collisions.seAgarra && velocity.y <= 0)
+            velocity.y = 0;
 
         //se hace el movimiento
         controller.Move(velocity * Time.deltaTime, directionalInput);
@@ -95,6 +109,9 @@ public class Player : MonoBehaviour
     {
         directionalInput = input;
 
+        if (prep && directionalInput.x != lastDirection && directionalInput.x != 0)
+            longJump = 1;
+
         if (directionalInput.x != 0)
             lastDirection = directionalInput.x;
     }
@@ -105,24 +122,25 @@ public class Player : MonoBehaviour
         if (wallSliding)
         {
             //si estas apuntando hacia la pared, si no estas manteniendo nada o si apuntas al contrario haras saltos diferentes
-            if (wallDirX == directionalInput.x)
+            if (wallDirX == directionalInput.x && controller.collisions.seAgarra)
             {
                 velocity.x = -wallDirX * wallJumpClimb.x;
                 velocity.y = wallJumpClimb.y;
                 wallJumpUp = true;
             }
-            else if (directionalInput.x == 0)
-            {
-                velocity.x = -wallDirX * wallJumpOff.x;
-                velocity.y = wallJumpOff.y;
-                wallJumpOut = true;
-            }
-            else
+            else if (wallDirX != directionalInput.x && directionalInput.x != 0)
             {
                 velocity.x = -wallDirX * wallLeap.x;
                 velocity.y = wallLeap.y;
                 wallJumpLeap = true;
             }
+            /*else
+            {
+                velocity.x = -wallDirX * wallJumpOff.x;
+                velocity.y = wallJumpOff.y;
+                wallJumpOut = true;
+            }*/
+            
         }
 
         if (controller.collisions.below)
@@ -137,10 +155,14 @@ public class Player : MonoBehaviour
             }
             else
             {
-                if (Prep)
+                if (prep)
                 {
-                    velocity.y = maxJumpVelocity / 2;
-                    velocity.x = maxJumpVelocity * 4 * lastDirection;
+                    velocity.y = 2*maxJumpVelocity/3;
+                    velocity.x = maxJumpVelocity * longJump * lastDirection;
+
+                    estela.GetComponent<SpriteRenderer>().enabled = false;
+                    longJump = 1;
+                    jumped = true;
                 }
                 else
                     velocity.y = maxJumpVelocity;
@@ -157,25 +179,102 @@ public class Player : MonoBehaviour
 
     public void ToggleRun()
     {
-        if (IsRunning)
+        if (isRunning)
         {
             moveSpeed = moveSpeed / 2;
-            IsRunning = false;
+            isRunning = false;
         }
         else
         {
             moveSpeed = moveSpeed * 2;
-            IsRunning = true;
+            isRunning = true;
         }
     }
 
     public void PrepareJump()
     {
-        if (controller.collisions.below)
+        //salto maximo 8.5
+        //salto minimo 2.1
+
+        int maxJump = 4, minJump = 1;
+
+        if (controller.collisions.below && !jumped)
         {
             moveSpeed = 0;
-            Prep = true;
+            prep = true;
+
+            //hacer los limites del salto
+            if (longJump >= maxJump)
+                prepare = false;
+            else if (longJump <= minJump)
+                prepare = true;
+
+            if (prepare)
+                longJump += 2 * Time.deltaTime;
+            else
+                longJump -= 2 * Time.deltaTime;
+            //hacer los limites del salto
+
+            EstelaSalto();
         }
+        else
+            jumped = false;
+    }
+
+    void EstelaSalto()
+    {
+        //probablemente se puede hacer con un solo hijo reposicionando el otro cada vez que quieras calcular los raycast
+        //se puede enviar un solo raycast (el que este en la direccion de movimiento) y si no golpea lanzar el otro para comprobar
+        Bounds bounds = fantasma.GetComponent<BoxCollider2D>().bounds;
+        float dstY = 0, raydistance = 5;
+
+        // A(1,2.1) B(4,8.5)
+        // (x-1)/(4-1) = (y-2.1)/(8.5-2.1)
+        // pos = (8.5-2.1)*((longJump-minJump)/(maxJump-minJump) + 2.1/(8.5-2.1))
+
+        //medJump = ((6.4) * (((longJump - minJump) / (maxJump - minJump)) + (2.1 / (6.4))));
+        float medJump = (float)((((longJump - 1) / 3) + (2.1 / 6.4)) * 6.4);
+
+        fantasma.transform.position = this.transform.position + new Vector3(medJump * lastDirection, (float)(0.5), 0);
+
+        //calcular la y con raycast
+        RaycastHit2D hitIzq = Physics2D.Raycast(new Vector2(bounds.min.x, bounds.min.y), Vector2.down, raydistance);
+        RaycastHit2D hitDer = Physics2D.Raycast(new Vector2(bounds.max.x, bounds.min.y), Vector2.down, raydistance);
+
+        Debug.DrawRay(new Vector2(bounds.min.x, bounds.min.y), Vector2.down * raydistance, Color.yellow);
+        Debug.DrawRay(new Vector2(bounds.max.x, bounds.min.y), Vector2.down * raydistance, Color.yellow);
+
+        estela.GetComponent<SpriteRenderer>().enabled = true;
+
+        if (hitDer && hitIzq)
+        {
+            dstY = (float)(hitDer.distance - Mathf.Abs(fantasma.transform.position.y - this.transform.position.y) + bounds.size.y);
+        }
+        else
+        {
+            estela.GetComponent<SpriteRenderer>().enabled = false;
+        }
+
+        //podria hacer que cuando se acerque a un borde se haga mas pequeño hasta desaparecer
+        //calcular la y con raycast
+
+        if (hitDer.distance == 0 && hitIzq.distance == 0)
+        {
+            estela.GetComponent<SpriteRenderer>().enabled = false;
+        }
+
+        //si golpea una pared no avances mas
+
+        if (hitDer && hitIzq && (hitDer.distance == 0 || hitIzq.distance == 0))
+        {
+            prepare = false;
+        }
+        else
+            estela.transform.position = this.transform.position + new Vector3(medJump * lastDirection, -dstY, 0);
+
+        //si golpea una pared no avances mas
+
+
     }
 
     public void UnprepareJump()
@@ -183,21 +282,23 @@ public class Player : MonoBehaviour
         if (directionalInput.x != 0)
         {
             moveSpeed = 10;
-            IsRunning = true;
+            isRunning = true;
         }
         else
         {
             moveSpeed = 5;
-            IsRunning = false;
+            isRunning = false;
         }
 
-        Prep = false;
+        longJump = 1;
+        estela.GetComponent<SpriteRenderer>().enabled = false;
+        prep = false;
     }
 
     void ClimbWall()
     {
         //solo puede empezar a escalar en el suelo pegado a una pared de 90º y moviendote hacia ella mientras corres
-        if ((controller.collisions.below && IsRunning || sube) && wallDirX == directionalInput.x && controller.collisions.climbingWall)
+        if ((controller.collisions.below && isRunning || sube) && wallDirX == directionalInput.x && controller.collisions.climbingWall)
         {
             sube = true;
             timeToWallUnstick = wallStickTime;
@@ -252,6 +353,7 @@ public class Player : MonoBehaviour
                 else
                 {
                     timeToWallUnstick = wallStickTime;
+                    directionalInput.x = wallDirX;
                 }
             }
             else
@@ -260,7 +362,6 @@ public class Player : MonoBehaviour
             }
 
         }
-        //manejar la velocidad de escalado aqui??
     }
 
     void CalculateVelocity ()

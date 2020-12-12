@@ -56,7 +56,7 @@ public class animationController : MonoBehaviour
             else
                 if (player.directionalInput.x != 0)
                 {
-                    if (player.IsRunning)
+                    if (player.isRunning)
                     {     
                         ChangeAnimationState("Run");
                     }
@@ -86,7 +86,12 @@ public class animationController : MonoBehaviour
                         if (player.timeToWallUnstick < .2f)
                             ChangeAnimationState("LeapingWall");
                         else
-                            ChangeAnimationState("sliding");
+                        {
+                            if (controller.collisions.seAgarra)
+                                ChangeAnimationState("Hang");
+                            else
+                                ChangeAnimationState("sliding");
+                        }
                     }
                     else
                         ChangeAnimationState("JumpDown");

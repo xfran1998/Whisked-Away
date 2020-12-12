@@ -134,7 +134,13 @@ public class Controller2D : RaycastController
                     collisions.left = directionX == -1;
                     collisions.right = directionX == 1;
                 }
+
+                if (deltaMove.y <= 0 && i != horizontalRayCount - 1 && collisions.climbingWall)
+                    ClimbWall();
             }
+
+            
+
         }
     }
 
@@ -314,6 +320,18 @@ public class Controller2D : RaycastController
         }
     }
 
+    void ClimbWall()
+    {
+        Vector2 rayOrigin = ((collisions.faceDir == -1) ? raycastOrigins.topLeft : raycastOrigins.topRight);
+        RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.right * collisions.faceDir, 5*skinWidth, collisionMask);
+
+        Debug.DrawRay(rayOrigin, Vector2.right * collisions.faceDir * 5 * skinWidth, Color.yellow);
+
+        if (hit && hit.collider.tag == "agarrar")
+            collisions.seAgarra = true;
+
+    }
+
     public struct CollisionInfo
     {
         public bool above, below;
@@ -323,6 +341,8 @@ public class Controller2D : RaycastController
         public float slopeAngle, slopeAngleOld;
         public bool slidingDownMaxSlope;
         public Vector2 slopeNormal;
+
+        public bool seAgarra;
 
         public Vector2 velocityOld;
 
@@ -335,7 +355,7 @@ public class Controller2D : RaycastController
         {
             above = below = false;
             left = right = false;
-            climbingSlope = descendingSlope = slidingDownMaxSlope = climbingWall = false;
+            climbingSlope = descendingSlope = slidingDownMaxSlope = climbingWall = seAgarra = false;
             slopeNormal = Vector2.zero;
 
             slopeAngleOld = slopeAngle;

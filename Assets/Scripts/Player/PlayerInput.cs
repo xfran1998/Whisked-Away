@@ -35,7 +35,7 @@ public class PlayerInput : MonoBehaviour
             player.ToggleRun();
         }
 
-        if (Input.GetKeyDown(KeyCode.LeftControl))
+        if (Input.GetKey(KeyCode.LeftControl))
         {
             player.PrepareJump();
         }
